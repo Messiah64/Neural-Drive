@@ -6,7 +6,7 @@ from pycaret.classification import load_model
 import time
 
 # Load the saved model
-model = load_model('jbest')
+model = load_model('nbest')
 
 # Function to read EMG data and make predictions
 def predict_emg(port, sample_rate=1000):
@@ -65,4 +65,4 @@ def predict_emg(port, sample_rate=1000):
 
 # Call the prediction function
 if __name__ == "__main__":
-    predict_emg('COM10')  # Update with your Arduino's COM port
+    predict_emg('/dev/cu.usbmodem11201')  # Updated to use Mac port

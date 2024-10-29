@@ -22,7 +22,7 @@ last_function_call_time = time.time()
 latest_prediction = "NO"
 
 # Load the saved model
-model = load_model('cbest')
+model = load_model('nbest')
 
 async def send_command_via_websocket(command):
     try:        
@@ -111,7 +111,7 @@ def main():
     flask_thread.start()
 
     # Start EMG prediction
-    predict_emg('COM10')  # Update with your Arduino's COM port
+    predict_emg('/dev/cu.usbmodem11201')  # Update with your Arduino's COM port
 
 if __name__ == "__main__":
     main()
