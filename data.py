@@ -50,20 +50,17 @@ def main():
 
     # Run code 2 times, to populate YES.csv and NO.csv independantly, then later  combine them with combine.py into data.csv
 
-
-
-    
     # Collect YES data
     yes_data = record_emg_data(port, duration, 'YES')
     df = pd.DataFrame(yes_data, columns=['Timestamp', 'Raw_EMG', 'Independent_Component', 'Label'])
-    df.to_csv('jyes.csv', index=False)
-    '''
+    df.to_csv('nyes.csv', index=False)
+    
     
     # Collect NO data
-    no_data = record_emg_data(port, duration, 'NO')
-    df = pd.DataFrame(no_data, columns=['Timestamp', 'Raw_EMG', 'Independent_Component', 'Label'])
-    df.to_csv('jno.csv', index=False)
-    '''
+    # no_data = record_emg_data(port, duration, 'NO')
+    # df = pd.DataFrame(no_data, columns=['Timestamp', 'Raw_EMG', 'Independent_Component', 'Label'])
+    # df.to_csv('nno.csv', index=False)
+    
    
     
 

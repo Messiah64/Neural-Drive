@@ -29290,3 +29290,11 @@ ier, f"{metric.capitalize()} is", len(result))
 'cuml' is a soft dependency and not included in the pycaret installation. Please run: `pip install cuml` to install.
 2024-10-29 15:36:26,941:INFO:Initializing load_model()
 2024-10-29 15:36:26,941:INFO:load_model(model_name=jbest, platform=None, authentication=None, verbose=True)
+2024-10-29 23:07:07,675:WARNING:
+'cuml' is a soft dependency and not included in the pycaret installation. Please run: `pip install cuml` to install.
+2024-10-29 23:07:07,676:WARNING:
+'cuml' is a soft dependency and not included in the pycaret installation. Please run: `pip install cuml` to install.
+2024-10-29 23:07:07,676:WARNING:
+'cuml' is a soft dependency and not included in the pycaret installation. Please run: `pip install cuml` to install.
+2024-10-29 23:07:07,676:WARNING:
+'cuml' is a soft dependency and not included in the pycaret installation. Please run: `pip install cuml` to install.
