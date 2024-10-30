@@ -1,0 +1,10 @@
+2024-10-30 01:19:06,797:WARNING:
+'cuml' is a soft dependency and not included in the pycaret installation. Please run: `pip install cuml` to install.
+2024-10-30 01:19:06,797:WARNING:
+'cuml' is a soft dependency and not included in the pycaret installation. Please run: `pip install cuml` to install.
+2024-10-30 01:19:06,797:WARNING:
+'cuml' is a soft dependency and not included in the pycaret installation. Please run: `pip install cuml` to install.
+2024-10-30 01:19:06,797:WARNING:
+'cuml' is a soft dependency and not included in the pycaret installation. Please run: `pip install cuml` to install.
+2024-10-30 01:19:08,045:INFO:Initializing load_model()
+2024-10-30 01:19:08,045:INFO:load_model(model_name=nbest, platform=None, authentication=None, verbose=True)
