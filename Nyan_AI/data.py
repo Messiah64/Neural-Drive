@@ -130,20 +130,20 @@ def main():
     
     try:
         # Collect YES data
-        # yes_data = record_emg_data(port, duration, 'YES')
+        # yes_data = record_emg_data(port, duration, 'GO')
         # if yes_data:
         #     df = pd.DataFrame(yes_data, 
         #                     columns=['Timestamp', 'Raw_EMG', 'Independent_Component', 'Label'])
         #     df.to_csv('nyes.csv', index=False)
-        #     print("Successfully saved YES data to nyes.csv")
+        #     print("Successfully saved YES data to ngo.csv")
         
         # Uncomment to collect NO data
-        no_data = record_emg_data(port, duration, 'NO')
+        no_data = record_emg_data(port, duration, 'STOP')
         if no_data:
             df = pd.DataFrame(no_data, 
                              columns=['Timestamp', 'Raw_EMG', 'Independent_Component', 'Label'])
             df.to_csv('nno.csv', index=False)
-            print("Successfully saved NO data to nno.csv")
+            print("Successfully saved NO data to nstop.csv")
             
     except Exception as e:
         print(f"An error occurred during data collection: {e}")
