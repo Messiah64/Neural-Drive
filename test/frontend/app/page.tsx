@@ -199,7 +199,7 @@ export default function Home() {
                 System Calibration
               </CardTitle>
               <CardDescription>
-                Record sample controls to train the classification system
+                Record sample controls to train the processing system
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -283,10 +283,10 @@ export default function Home() {
             <CardHeader>
               <CardTitle className="text-xl flex items-center gap-2">
                 <Waves className="w-5 h-5 text-primary" />
-                Real-time Classification
+                Real-time Processing
               </CardTitle>
               <CardDescription>
-                Start real-time control classification
+                Start real-time control processing
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -299,10 +299,10 @@ export default function Home() {
                 {isInferring ? (
                   <span className="flex items-center gap-2 justify-center">
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    Stop Classification
+                    Stop Processing
                   </span>
                 ) : (
-                  'Start Real-time Classification'
+                  'Start Real-time Processing'
                 )}
               </MotionButton>
 

@@ -167,7 +167,7 @@ def start_recording():
     stop_recording.clear()
     recording_thread = threading.Thread(
         target=record_emg_data,
-        args=('/dev/cu.usbmodem11301', 15, motion, data_queue, stop_recording)
+        args=('/dev/cu.usbmodem11401', 15, motion, data_queue, stop_recording)
     )
     recording_thread.start()
     
@@ -203,7 +203,7 @@ def start_inference():
     stop_recording.clear()
     inference_thread = threading.Thread(
         target=inference_loop,
-        args=('/dev/cu.usbmodem11301', data_queue, stop_recording)
+        args=('/dev/cu.usbmodem11401', data_queue, stop_recording)
     )
     inference_thread.start()
     
