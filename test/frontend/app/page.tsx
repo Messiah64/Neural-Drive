@@ -1,12 +1,14 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Activity, AlertCircle, CheckCircle, XCircle, Loader2, Brain, Waves } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { startRecording, stopRecording, startInference, stopInference, getStatus, trainModel } from '../api';
 
-// Custom Button component using theme variables
+// Custom Button component with updated styling
 const MotionButton = ({ 
   children, 
   isRecording, 
@@ -43,19 +45,40 @@ const MotionButton = ({
 );
 
 export default function Home() {
-  const [recordingMotion, setRecordingMotion] = useState<string | null>(null);
+  // State management
+  const [features, setFeatures] = useState<string[]>([]);
+  const [newFeature, setNewFeature] = useState('');
+  const [recordingFeature, setRecordingFeature] = useState<string | null>(null);
+  const [recordingStatus, setRecordingStatus] = useState('idle');
   const [timeLeft, setTimeLeft] = useState(15);
   const [prediction, setPrediction] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isInferring, setIsInferring] = useState(false);
-  const [calibratedMotions, setCalibratedMotions] = useState<Set<string>>(new Set());
+  const [calibratedFeatures, setCalibratedFeatures] = useState<Set<string>>(new Set());
   const [isTraining, setIsTraining] = useState(false);
   const [modelTrained, setModelTrained] = useState(false);
 
-  const motions = ['GO', 'STOP'];
-  const isCalibrated = calibratedMotions.size === motions.length;
+  const isCalibrated = features.length > 0 && calibratedFeatures.size === features.length;
 
-  // Poll for status updates
+  // Add new feature handler
+  const handleAddFeature = () => {
+    if (newFeature && !features.includes(newFeature)) {
+      setFeatures([...features, newFeature]);
+      setNewFeature('');
+    }
+  };
+
+  // Remove feature handler
+  const handleRemoveFeature = (feature: string) => {
+    setFeatures(features.filter(f => f !== feature));
+    setCalibratedFeatures(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(feature);
+      return newSet;
+    });
+  };
+
+  // Status polling effect
   useEffect(() => {
     let intervalId: NodeJS.Timeout;
     
@@ -65,14 +88,9 @@ export default function Home() {
         
         if (status.status === 'error') {
           setError(status.message);
-          if (recordingMotion) {
-            setRecordingMotion(null);
-            setTimeLeft(15);
-          }
-        } else if (status.status === 'success') {
-          if (recordingMotion) {
-            setCalibratedMotions(prev => new Set([...prev, recordingMotion]));
-          }
+          setRecordingStatus('idle');
+          setRecordingFeature(null);
+          setTimeLeft(15);
         } else if (status.status === 'prediction') {
           setPrediction(status.prediction);
         }
@@ -81,8 +99,8 @@ export default function Home() {
       }
     };
 
-    if (recordingMotion || isInferring) {
-      intervalId = setInterval(pollStatus, 1000);
+    if (isInferring) {
+      intervalId = setInterval(pollStatus, 100);
     }
 
     return () => {
@@ -90,29 +108,48 @@ export default function Home() {
         clearInterval(intervalId);
       }
     };
-  }, [recordingMotion, isInferring]);
+  }, [isInferring]);
 
-  // Timer effect
+  // Countdown timer effect
   useEffect(() => {
-    let timer: NodeJS.Timeout;
-    if (recordingMotion && timeLeft > 0) {
-      timer = setInterval(() => {
+    let timerId: NodeJS.Timeout;
+    
+    if (recordingStatus === 'recording' && timeLeft > 0) {
+      timerId = setInterval(() => {
         setTimeLeft(prev => prev - 1);
       }, 1000);
-    } else if (timeLeft === 0 && recordingMotion) {
-      handleStopRecording();
     }
-    return () => clearInterval(timer);
-  }, [recordingMotion, timeLeft]);
 
-  // Start recording handler
-  const handleStartRecording = async (motion: string) => {
+    return () => {
+      if (timerId) {
+        clearInterval(timerId);
+      }
+    };
+  }, [recordingStatus, timeLeft]);
+
+  // Timer effect to handle completion
+  useEffect(() => {
+    if (timeLeft === 0 && recordingStatus === 'recording') {
+      handleStopRecording();
+      // Immediately mark the motion as calibrated
+      if (recordingFeature) {
+        setCalibratedFeatures(prev => new Set([...prev, recordingFeature]));
+      }
+      setRecordingStatus('idle');
+      setRecordingFeature(null);
+      setTimeLeft(15);
+    }
+  }, [timeLeft, recordingStatus, recordingFeature]);
+
+  // Recording handlers
+  const handleStartRecording = async (feature: string) => {
     try {
       setError(null);
-      const response = await startRecording(motion);
+      const response = await startRecording(feature);
       if (response.status === 'success') {
-        setRecordingMotion(motion);
+        setRecordingFeature(feature);
         setTimeLeft(15);
+        setRecordingStatus('recording');
       } else {
         setError(response.message);
       }
@@ -122,13 +159,11 @@ export default function Home() {
     }
   };
 
-  // Stop recording handler
   const handleStopRecording = async () => {
     try {
-      if (recordingMotion) {
+      if (recordingFeature) {
         await stopRecording();
-        setRecordingMotion(null);
-        setTimeLeft(15);
+        console.log('Stopping recording...');
       }
     } catch (err) {
       setError('Failed to stop recording');
@@ -155,7 +190,7 @@ export default function Home() {
     }
   };
 
-  // Toggle inference handler
+  // Inference handler
   const toggleInference = async () => {
     try {
       setError(null);
@@ -177,6 +212,35 @@ export default function Home() {
     }
   };
 
+  // Recording Status Component
+  const RecordingStatus = () => {
+    if (!recordingFeature) return null;
+    
+    return (
+      <Alert className="bg-primary/10 border-primary/20">
+        <div className="flex items-center gap-2">
+          {recordingStatus === 'completing' ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+              <AlertTitle className="text-primary">Finalizing Recording</AlertTitle>
+            </>
+          ) : (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+              <AlertTitle className="text-primary">Recording in Progress</AlertTitle>
+            </>
+          )}
+        </div>
+        <AlertDescription className="text-primary/80">
+          {recordingStatus === 'completing' 
+            ? `Saving "${recordingFeature}" control data...`
+            : `Think about "${recordingFeature}" for ${timeLeft} seconds.`
+          }
+        </AlertDescription>
+      </Alert>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-background p-8">
       <div className="max-w-5xl mx-auto space-y-8">
@@ -184,10 +248,41 @@ export default function Home() {
         <div className="text-center space-y-2">
           <h1 className="text-3xl font-bold tracking-tight flex items-center justify-center gap-2">
             <Brain className="w-8 h-8 text-primary" />
-            Neural Drive Calibration
+            Neural Feature Calibration
           </h1>
-          <p className="text-muted-foreground">One time calibration for new users only</p>
+          <p className="text-muted-foreground">One time calibration for new features</p>
         </div>
+
+        {/* Feature Management */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-xl flex items-center gap-2">
+              <Activity className="w-5 h-5 text-primary" />
+              Feature Management
+            </CardTitle>
+            <CardDescription>
+              Add or remove features to calibrate
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex gap-2">
+              <Input
+                placeholder="Enter new feature name"
+                value={newFeature}
+                onChange={(e) => setNewFeature(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleAddFeature()}
+              />
+              <Button onClick={handleAddFeature}>Add Feature</Button>
+            </div>
+            {features.length === 0 && (
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>No Features</AlertTitle>
+                <AlertDescription>Add at least one feature to begin calibration</AlertDescription>
+              </Alert>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Main Content */}
         <div className="grid gap-8">
@@ -199,31 +294,42 @@ export default function Home() {
                 System Calibration
               </CardTitle>
               <CardDescription>
-                Record sample controls to train the processing system
+                Record sample data for each feature
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Motion Recording Buttons */}
-                {motions.map((motion) => (
-                  <Card key={motion} className="border-2 border-dashed hover:border-primary/20 transition-colors">
+                {/* Feature Recording Buttons */}
+                {features.map((feature) => (
+                  <Card key={feature} className="border-2 border-dashed hover:border-primary/20 transition-colors">
                     <CardContent className="pt-6">
+                      <div className="flex justify-between items-center mb-4">
+                        <h3 className="font-semibold">{feature}</h3>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveFeature(feature)}
+                          disabled={recordingStatus !== 'idle'}
+                        >
+                          <XCircle className="w-4 h-4" />
+                        </Button>
+                      </div>
                       <MotionButton
-                        isRecording={recordingMotion === motion}
-                        disabled={recordingMotion !== null && recordingMotion !== motion}
-                        onClick={() => handleStartRecording(motion)}
+                        isRecording={recordingFeature === feature}
+                        disabled={recordingFeature !== null && recordingFeature !== feature}
+                        onClick={() => handleStartRecording(feature)}
                         className="h-32 text-lg"
-                        isCalibrated={calibratedMotions.has(motion)}
+                        isCalibrated={calibratedFeatures.has(feature)}
                       >
                         <div className="flex flex-col items-center gap-3">
-                          {calibratedMotions.has(motion) ? (
+                          {calibratedFeatures.has(feature) ? (
                             <CheckCircle className="w-8 h-8" />
                           ) : (
-                            <Activity className={`w-8 h-8 ${recordingMotion === motion ? 'animate-pulse' : ''}`} />
+                            <Activity className={`w-8 h-8 ${recordingFeature === feature ? 'animate-pulse' : ''}`} />
                           )}
                           <div className="space-y-1">
-                            <div>"{motion}" Control</div>
-                            {recordingMotion === motion && (
+                            <div>Record "{feature}"</div>
+                            {recordingFeature === feature && (
                               <div className="text-sm font-normal">{timeLeft}s remaining</div>
                             )}
                           </div>
@@ -235,15 +341,7 @@ export default function Home() {
               </div>
 
               {/* Recording Status */}
-              {recordingMotion && (
-                <Alert className="bg-primary/10 border-primary/20">
-                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                  <AlertTitle className="text-primary">Recording in Progress</AlertTitle>
-                  <AlertDescription className="text-primary/80">
-                    Think about "{recordingMotion}" for {timeLeft} seconds.
-                  </AlertDescription>
-                </Alert>
-              )}
+              <RecordingStatus />
             </CardContent>
           </Card>
 
@@ -344,10 +442,15 @@ export default function Home() {
               <CheckCircle className="w-4 h-4" />
               Calibration complete - Ready for training
             </div>
+          ) : features.length > 0 ? (
+            <div className="flex items-center justify-center gap-2">
+              <AlertCircle className="w-4 h-4" />
+              Please complete calibration for all features
+            </div>
           ) : (
             <div className="flex items-center justify-center gap-2">
               <AlertCircle className="w-4 h-4" />
-              Please complete calibration for both controls
+              Please add features to begin
             </div>
           )}
         </div>
