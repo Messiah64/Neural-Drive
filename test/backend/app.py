@@ -22,6 +22,7 @@ CORS(app, resources={
         "origins": ["http://localhost:3000", "http://127.0.0.1:3000"],
         "methods": ["GET", "POST", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization"],
+        "supports_credentials": True,
         "max_age": 3600
     }
 })
@@ -35,6 +36,14 @@ model = None
 current_thread = None
 connected_clients = set()
 websocket_loop = None
+
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    return response
 
 def get_port():
     """Determine the appropriate port based on operating system"""
