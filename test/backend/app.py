@@ -33,40 +33,8 @@ data_queue = queue.Queue()
 stop_event = threading.Event()
 model = None
 current_thread = None
-
-# Add WebSocket globals
 connected_clients = set()
-loop = None
-
-# Add WebSocket helper functions
-async def _send_to_all(message: str):
-    """Asynchronously send 'message' to all connected WebSocket clients."""
-    if not connected_clients:
-        return
-    await asyncio.wait([ws.send(message) for ws in connected_clients])
-
-def broadcast(message: str):
-    """Thread-safe way to schedule an asynchronous broadcast."""
-    if loop:
-        asyncio.run_coroutine_threadsafe(_send_to_all(message), loop)
-
-async def handle_client(websocket):
-    """Handle WebSocket client connections."""
-    print(f"Client connected: {websocket.remote_address}")
-    connected_clients.add(websocket)
-    try:
-        async for message in websocket:
-            print(f"Received from client: {message}")
-    except websockets.ConnectionClosed:
-        print(f"Client disconnected: {websocket.remote_address}")
-    finally:
-        connected_clients.remove(websocket)
-
-async def start_websocket_server():
-    """Start the WebSocket server."""
-    print("Starting WebSocket server on ws://0.0.0.0:8080/")
-    async with websockets.serve(handle_client, "0.0.0.0", 8080):
-        await asyncio.Future()  # Run forever
+websocket_loop = None
 
 def get_port():
     """Determine the appropriate port based on operating system"""
@@ -263,6 +231,10 @@ def inference_loop(port, data_queue, stop_event):
                     continue
 
             if not raw_data_1 or not raw_data_2:
+                data_queue.put({
+                    "status": "waiting",
+                    "message": "No data received"
+                })
                 continue
 
             # Process the data
@@ -291,21 +263,65 @@ def inference_loop(port, data_queue, stop_event):
             prediction_counts = predictions[pred_col].value_counts()
             majority_prediction = prediction_counts.index[0]
             
-            # Send prediction via WebSocket
-            broadcast("1" if majority_prediction.upper() == "YES" else "0")
-            
-            # Update UI via data queue
-            data_queue.put({
+            # Send prediction to both WebSocket clients and REST clients
+            prediction_data = {
                 "status": "prediction",
                 "prediction": str(majority_prediction),
                 "counts": {str(k): int(v) for k, v in prediction_counts.to_dict().items()},
                 "samples": len(raw_data_1)
-            })
+            }
+            
+            # Clear the queue before putting new prediction
+            while not data_queue.empty():
+                try:
+                    data_queue.get_nowait()
+                except queue.Empty:
+                    break
+                    
+            data_queue.put(prediction_data)
+            
+            # Send to WebSocket clients
+            if connected_clients:
+                # Send "1" for "GO" and "0" for "STOP"
+                ws_message = "1" if majority_prediction.upper() == "GO" else "0"
+                asyncio.run_coroutine_threadsafe(_send_to_all(ws_message), websocket_loop)
             
         ser.close()
     except Exception as e:
         print(f"Inference error: {e}")
         data_queue.put({"status": "error", "message": str(e)})
+
+# Add WebSocket handling functions
+async def _send_to_all(message: str):
+    """Asynchronously send 'message' to all connected WebSocket clients."""
+    if connected_clients:
+        await asyncio.wait([ws.send(message) for ws in connected_clients])
+
+async def handle_client(websocket):
+    """Handle WebSocket client connections."""
+    print(f"Client connected: {websocket.remote_address}")
+    connected_clients.add(websocket)
+    try:
+        async for message in websocket:
+            print(f"Received from client: {message}")
+    except websockets.ConnectionClosed:
+        print(f"Client disconnected: {websocket.remote_address}")
+    finally:
+        connected_clients.remove(websocket)
+
+async def start_websocket_server():
+    """Start the WebSocket server."""
+    print("Starting WebSocket server on ws://0.0.0.0:8080/")
+    async with websockets.serve(handle_client, "0.0.0.0", 8080):
+        await asyncio.Future()  # Run forever
+
+def run_websocket_server():
+    """Run the WebSocket server in a separate thread."""
+    global websocket_loop
+    websocket_loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(websocket_loop)
+    websocket_loop.run_until_complete(start_websocket_server())
+    websocket_loop.run_forever()
 
 @app.route('/api/record/start', methods=['POST'])
 def start_recording():
@@ -434,22 +450,10 @@ def handle_exception(e):
     }), 500)
 
 if __name__ == '__main__':
-    # Create the global event loop
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-
-    # Start the WebSocket server
-    websocket_task = loop.create_task(start_websocket_server())
-
-    # Start Flask app in a separate thread
-    from threading import Thread
-    flask_thread = Thread(target=lambda: app.run(port=5000))
-    flask_thread.daemon = True
-    flask_thread.start()
-
-    try:
-        loop.run_forever()
-    except KeyboardInterrupt:
-        print("Shutting down...")
-    finally:
-        loop.close()
+    # Start WebSocket server in a separate thread
+    websocket_thread = threading.Thread(target=run_websocket_server)
+    websocket_thread.daemon = True
+    websocket_thread.start()
+    
+    # Start Flask server
+    app.run(port=5000)
