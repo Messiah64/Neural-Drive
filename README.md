@@ -1,18 +1,18 @@
 # Neural Control System
 
-A brain-computer interface (BCI) system that enables control of physical devices through neural signal processing and classification.
+A brain-computer interface (BCI) system that enables control of physical devices through thoughts alone.
 
 ## Overview
 
-This project implements a complete neural control system with the following components:
+The following are the components that make up the system: 
 
 1. **Web Interface** - A React-based UI for feature calibration and real-time monitoring
-2. **Backend Server** - A Flask Python application that processes EMG/neural signals, trains ML models, and communicates predictions
+2. **Backend Server** - A Flask Python application that processes subvocal signals, trains ML models, and communicates predictions
 3. **IoT Devices** - ESP32-based devices that receive commands and control physical components:
-   - **House Device** - Controls a servo and NeoPixel display
+   - **House Device** - Simulates a house with a fan and a light
    - **Car Device** - Controls motors with directional LED indicators
 
-The system captures neural or EMG signals, processes them using Independent Component Analysis (ICA), classifies them with machine learning, and sends binary control signals (0/1) to connected devices via WebSockets.
+The system captures and amplifies subvocal signals using store-bought $10 signal amplifiers, classifies them with machine learning, and sends binary control signals (0/1) to connected devices via WebSockets.
 
 ## Components
 
@@ -21,21 +21,17 @@ The system captures neural or EMG signals, processes them using Independent Comp
 A React-based user interface that provides:
 
 - Feature management (add/remove control features)
-- Recording calibration data for each feature
 - Training the classification model
 - Real-time prediction monitoring
-- Visual feedback on system status
 
 ![Web Interface Screenshot](https://placeholder-img.com/web-interface.jpg)
 
 ### Backend Server (`app.py`)
 
-A Flask-based server that:
+A Flask and WebSocket server that:
 
-- Captures EMG/neural signals via serial connection
-- Processes signals using Fast ICA
-- Trains classification models using PyCaret
-- Provides REST API endpoints for feature management, recording, training, and prediction
+- Captures subvocal signals via serial connection
+- Processes them and trains models using PyCaret
 - Broadcasts binary control signals via WebSocket
 
 ### IoT Device: House Controller (`2ch_house.ino`)
@@ -43,19 +39,17 @@ A Flask-based server that:
 ESP32-based device that:
 
 - Connects to WiFi and WebSocket server
-- Controls a continuous rotation servo (360°)
-- Drives a NeoPixel 8x8 LED matrix for visual feedback
+- Controls a servo and a light
 - Responds to binary commands (0/1):
-  - `1`: Activates servo rotation and rapid color cycling
-  - `0`: Stops servo and turns off LEDs
+  - `1`: Activates servo and lights
+  - `0`: Stops servo and turns off lights
 
 ### IoT Device: Car Controller (`2ch_car.ino`)
 
 ESP32-based device that:
 
 - Connects to WiFi and WebSocket server
-- Controls two DC motors for vehicle movement
-- Drives a NeoPixel 8x8 LED matrix for visual indicators
+- Controls two DC motors for vehicle movement with LED indicators
 - Responds to binary commands (0/1):
   - `1`: Activates forward motion with animated green arrows
   - `0`: Stops motors and displays a red stop sign
@@ -67,7 +61,7 @@ ESP32-based device that:
 - Python 3.7+
 - Node.js and npm
 - ESP32 microcontrollers
-- USB-compatible EMG/neural signal device
+- USB-compatible subvocal signal amplifiers
 - Arduino IDE with ESP32 support
 
 ### Backend Setup
@@ -76,7 +70,8 @@ ESP32-based device that:
    ```bash
    pip install flask flask-cors pandas numpy scikit-learn pycaret serial websockets
 
-2. Connect your EMG/neural signal device to your computer via USB
+2. Connect your subvocal signal amplifier to your computer via USB
+
 3. Run the Flask server:
    ```bash
    python app.py
@@ -114,7 +109,7 @@ Access the web interface at `http://localhost:3000`
 
 #### Calibration and Training
 
-1. Add Features: Enter feature names (e.g., "Left", "Right") and click "Add Feature"
+1. Add Features: Enter feature names (e.g., "Yes", "No") and click "Add Feature"
 2. Record Calibration Data:
    - For each feature, click its button to start a 15-second recording session
    - Think about or perform the action associated with that feature
@@ -130,17 +125,17 @@ Access the web interface at `http://localhost:3000`
 
 Once calibrated and trained:
 
-The system will continuously classify your neural/EMG signals   
+The system will continuously classify your subvocal signals   
 When a signal is classified as feature 1, connected devices will activate:
 
-- House controller: servo will spin and LEDs will cycle colors
+- House controller: servo will spin and light will turn on
 - Car controller: motors will move forward and LEDs will show green arrows
 
 
 When a signal is classified as feature 0, devices will deactivate:
 
-- House controller: servo will stop and LEDs will turn off
-- Car controller: motors will stop and LEDs will show a red stop sign
+- House controller: servo will stop and light will turn off
+- Car controller: motors will stop and LEDs will turn off
 
 
 
